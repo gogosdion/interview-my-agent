@@ -18,5 +18,9 @@ class Settings:
     # Admin view (/admin). Empty = open (fine on your own laptop, not on the internet).
     admin_token: str = os.getenv("ADMIN_TOKEN", "")
 
+    # Abuse and cost protection for a public link
+    rate_limit_per_minute: int = int(os.getenv("RATE_LIMIT_PER_MINUTE", "6"))  # visitor messages per IP
+    max_daily_messages: int = int(os.getenv("MAX_DAILY_MESSAGES", "150"))  # all visitors together
+
 
 settings = Settings()

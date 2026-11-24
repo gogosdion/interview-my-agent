@@ -118,7 +118,10 @@ function showConversation(c) {
   $("totals").replaceChildren(el("span", "", `visitor messages: ${c.visitor_messages}`),
     el("span", "", `tokens in: ${c.input_tokens}`), el("span", "", `tokens out: ${c.output_tokens}`));
   const box = $("transcript"); box.replaceChildren();
-  for (const t of c.transcript) box.append(el("div", "t-" + t.role, (t.role === "tool" ? "→ " : "") + t.text));
+  for (const t of c.transcript) {
+    const srcs = (t.sources || []).map(x => x.label).join(" · ");
+    box.append(el("div", "t-" + t.role, (t.role === "tool" ? "→ " : "") + t.text + (srcs ? "\n✓ Sources: " + srcs : "")));
+  }
 }
 
 function short(v, n = 120) { const s = typeof v === "string" ? v : JSON.stringify(v); return s.length > n ? s.slice(0, n) + "…" : s; }
@@ -134,7 +137,7 @@ function summarize(e) {
       (d.approved_by ? ` · approved by ${d.approved_by}` : "");
     case "approval_requested": return `${d.tool} · waiting for a human`;
     case "approval_decided": return `${d.tool} · ${d.decision}` + (d.reason ? ` · “${short(d.reason, 60)}”` : "");
-    case "answer_sent": return `“${short(d.text)}”`;
+    case "answer_sent": return `“${short(d.text, 80)}”` + (d.sources_cited ? ` · sources ${d.sources_verified.length}/${d.sources_cited.length} verified` + (d.sources_dropped.length ? `, dropped: ${d.sources_dropped.join(", ")}` : "") : "");
     default: return short(d);
   }
 }

@@ -4,8 +4,10 @@ The LLM never executes anything itself: it only returns a tool name and JSON
 arguments. This module validates the arguments and does the real work.
 """
 
+import html as html_lib
 import re
 import time
+from datetime import datetime, timezone
 
 import httpx
 from pydantic import BaseModel, Field, ValidationError, field_validator
@@ -44,10 +46,11 @@ TOOL_DEFINITIONS = [
     {
         "name": "check_live_site",
         "description": (
-            "Call the public WordPress REST API of one of Dionysios's live sites, right now, as live proof that it "
-            "exists and runs. Returns the site's name, response time, number of pages, number of products for "
-            "e-shops, whether its MCP endpoint is live, and the custom REST endpoints he built. "
-            "Only his own project domains are allowed."
+            "Check one of Dionysios's live sites right now, as live proof that it exists and runs. For WordPress "
+            "sites it calls the public REST API: name, response time, pages, products for e-shops, whether its MCP "
+            "endpoint is live, and the custom REST endpoints he built. For his Next.js site (gowebgo.gr) it loads the "
+            "home page: title, response time, size, that it is a Next.js static export, and whether the sitemap and "
+            "llms.txt are published. Only his own project domains are allowed."
         ),
         "input_schema": {
             "type": "object",
@@ -100,11 +103,45 @@ def _project_by_domain(domain: str) -> dict | None:
     return next((p for p in load_projects() if p["domain"] == domain), None)
 
 
+def describe_page(page: str) -> dict:
+    """Title and framework of an HTML page (no network: easy to test)."""
+    match = re.search(r"<title[^>]*>(.*?)</title>", page, re.S | re.I)
+    title = html_lib.unescape(match.group(1)).strip() if match else None
+    framework = None
+    if "/_next/" in page or "self.__next_f" in page or "__NEXT_DATA__" in page:
+        framework = "Next.js" + (" (App Router)" if "self.__next_f" in page else "")
+    return {"title": title, "framework": framework}
+
+
+def _check_static_site(domain: str) -> dict:
+    """For sites that are not WordPress, such as his Next.js static export."""
+    headers = {"User-Agent": "interview-my-agent/1.0"}
+    with httpx.Client(timeout=10, headers=headers, follow_redirects=True) as http:
+        start = time.perf_counter()
+        home = http.get(f"https://{domain}/")
+        elapsed_ms = round((time.perf_counter() - start) * 1000)
+        home.raise_for_status()
+        page = describe_page(home.text)
+        return {
+            "site": f"https://{domain}",
+            "name": page["title"],
+            "framework": page["framework"],
+            "static_export": not any(h.lower() == "x-powered-by" for h in home.headers),
+            "response_time_ms": elapsed_ms,
+            "home_page_size_kb": round(len(home.content) / 1024),
+            "sitemap_xml_published": http.get(f"https://{domain}/sitemap.xml").is_success,
+            "llms_txt_published": http.get(f"https://{domain}/llms.txt").is_success,
+            "checked_at": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC"),
+        }
+
+
 def check_live_site(domain: str) -> dict:
     project = _project_by_domain(domain)
     if project is None:
         allowed = ", ".join(p["domain"] for p in load_projects())
         raise ValueError(f"Not one of Dionysios's projects. Allowed: {allowed}")
+    if project.get("kind") == "nextjs":
+        return _check_static_site(domain)
 
     base = f"https://{domain}/wp-json"
     headers = {"User-Agent": "interview-my-agent/1.0"}
@@ -130,7 +167,7 @@ def check_live_site(domain: str) -> dict:
             products = http.get(f"{base}/wc/store/v1/products", params={"per_page": 1})
             if products.is_success:
                 result["products_in_shop"] = int(products.headers.get("X-WP-Total", 0))
-        result["checked_at"] = time.strftime("%Y-%m-%d %H:%M:%S")
+        result["checked_at"] = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
         return result
 
 

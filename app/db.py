@@ -1,5 +1,6 @@
 """Database models: conversations, approvals and an append-only audit log."""
 
+import secrets
 from datetime import datetime, timezone
 
 from sqlalchemy import JSON, DateTime, ForeignKey, Integer, String, Text, create_engine
@@ -26,6 +27,9 @@ class Conversation(Base):
     __tablename__ = "conversations"
 
     id: Mapped[int] = mapped_column(primary_key=True)
+    # Random secret given only to the visitor who started the conversation,
+    # so nobody can read someone else's conversation by guessing its id.
+    access_key: Mapped[str] = mapped_column(String(64), default=lambda: secrets.token_urlsafe(24))
     # idle -> running -> (waiting_approval -> queued -> running)* -> idle | failed
     status: Mapped[str] = mapped_column(String(32), default="queued")
     # Full message history with the LLM, saved after every step (checkpointing),

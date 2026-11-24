@@ -43,7 +43,9 @@
   .chip:hover { border-color: var(--accent); color: var(--accent); }
   .chip:disabled { opacity: .5; cursor: default; }
 
-  #chat { flex: 1; display: flex; flex-direction: column; gap: 12px; padding-bottom: 16px; }
+  html { overflow-anchor: none; }
+  #chat { display: flex; flex-direction: column; gap: 12px; }
+  .agent-status { flex: 1; display: flex; flex-direction: column; align-items: flex-start; padding: 12px 0 16px; }
   .msg { max-width: 80%; padding: 12px 16px; border-radius: 14px; white-space: normal; overflow-wrap: anywhere; }
   .msg.visitor { align-self: flex-end; background: var(--ink); color: #fff; border-bottom-right-radius: 4px; }
   .msg.agent { align-self: flex-start; background: var(--panel); border: 1px solid var(--line); border-bottom-left-radius: 4px; }
@@ -51,6 +53,7 @@
   .msg.agent ul { margin: 4px 0 8px; padding-left: 20px; }
   .msg.agent code { font-family: var(--mono); font-size: 13px; background: var(--bg); padding: 1px 4px; border-radius: 4px; }
   .msg.agent .sources { font: 12px/1.5 var(--mono); color: var(--muted); border-top: 1px dashed var(--line); padding-top: 6px; margin-top: 8px; }
+  .msg.agent .sources .verified { color: var(--ok); }
   .tool { align-self: flex-start; font: 12.5px/1.4 var(--mono); color: var(--muted); padding-left: 4px; }
   .tool::before { content: "→ "; color: var(--accent); }
   .notice { align-self: flex-start; background: var(--warn-soft); color: var(--warn); border: 1px solid #ecd9b0; border-radius: 10px; padding: 10px 14px; font-size: 14px; }
@@ -115,6 +118,7 @@
     </section>
 
     <div id="chat" aria-live="polite"></div>
+    <div id="agentStatus" class="agent-status"></div>
 
     <form id="form">
       <div class="composer">
@@ -138,7 +142,7 @@ const SUGGESTIONS = [
   "Can we schedule a follow-up?"
 ];
 
-let conversationId = null, polling = null, busy = false;
+let conversationId = null, accessKey = null, polling = null, busy = false;
 const $ = (id) => document.getElementById(id);
 
 function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; }
@@ -167,24 +171,59 @@ function renderAgentText(text) {
   return box;
 }
 
-function render(conv) {
-  const chat = $("chat");
-  chat.replaceChildren();
-  for (const item of conv.transcript) {
-    if (item.role === "visitor") chat.append(el("div", "msg visitor", item.text));
-    else if (item.role === "tool") chat.append(el("div", "tool", item.text));
-    else chat.append(renderAgentText(item.text));
+// After a question is sent, bring that question to the top of the screen, so the
+// visitor sees it with the agent's answer appearing right below. On a phone the
+// profile and projects sit under the chat, so "the bottom of the page" is the wrong place.
+function scrollToLatestQuestion() {
+  const questions = document.querySelectorAll(".msg.visitor");
+  const last = questions[questions.length - 1];
+  if (!last) return;
+  const top = last.getBoundingClientRect().top + window.scrollY - 16;
+  window.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
+}
+
+// Only new messages are added and nothing above them is rebuilt, so the page never
+// jumps while the agent works and the visitor can scroll freely.
+let renderedKeys = [];
+
+function itemNode(item) {
+  if (item.role === "visitor") return el("div", "msg visitor", item.text);
+  if (item.role === "tool") return el("div", "tool", item.text);
+  const box = renderAgentText(item.text);
+  if (item.sources && item.sources.length) {
+    const src = el("div", "sources");
+    src.title = "Checked by the code: each source was really returned by the agent's tools in this answer.";
+    src.append(el("span", "verified", "✓ Sources: "), el("span", "", item.sources.map(x => x.label).join(" · ")));
+    box.append(src);
   }
-  if (conv.status === "queued" || conv.status === "running") {
-    const t = el("div", "typing"); t.append(el("i"), el("i"), el("i")); chat.append(t);
-  } else if (conv.status === "waiting_approval") {
-    chat.append(el("div", "notice", "Waiting for Dionysios to approve this request…"));
-  } else if (conv.status === "failed") {
-    chat.append(el("div", "notice error", "Something went wrong: " + (conv.last_error || "unknown error")));
-  }
+  return box;
+}
+
+function render(conv, { follow = false } = {}) {
   const working = ["queued", "running", "waiting_approval"].includes(conv.status);
+  const chat = $("chat");
+  const keys = conv.transcript.map(t => t.role + "|" + t.text + "|" + (t.sources || []).map(x => x.id).join(","));
+  let same = 0;
+  while (same < renderedKeys.length && same < keys.length && renderedKeys[same] === keys[same]) same++;
+  while (chat.children.length > same) chat.lastElementChild.remove();
+  conv.transcript.slice(same).forEach(item => chat.append(itemNode(item)));
+  renderedKeys = keys;
+
+  const status = $("agentStatus");
+  const signature = conv.status + "|" + (conv.last_error || "");
+  if (status.dataset.sig !== signature) {
+    status.dataset.sig = signature;
+    status.replaceChildren();
+    if (conv.status === "queued" || conv.status === "running") {
+      const t = el("div", "typing"); t.append(el("i"), el("i"), el("i")); status.append(t);
+    } else if (conv.status === "waiting_approval") {
+      status.append(el("div", "notice", "Waiting for Dionysios to approve this request…"));
+    } else if (conv.status === "failed") {
+      status.append(el("div", "notice error", "Something went wrong: " + (conv.last_error || "unknown error")));
+    }
+  }
   setBusy(working);
-  window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
+  if (follow) scrollToLatestQuestion();
   return working;
 }
 
@@ -205,7 +244,7 @@ function poll() {
   clearInterval(polling);
   polling = setInterval(async () => {
     try {
-      const conv = await api(`/conversations/${conversationId}`);
+      const conv = await api(`/conversations/${conversationId}?key=${encodeURIComponent(accessKey)}`);
       if (!render(conv)) clearInterval(polling);
     } catch (e) { $("error").textContent = e.message; clearInterval(polling); }
   }, 1000);
@@ -220,10 +259,11 @@ async function ask(text) {
   setBusy(true);
   try {
     const conv = conversationId
-      ? await api(`/conversations/${conversationId}/messages`, { method: "POST", body: JSON.stringify({ message: text }) })
+      ? await api(`/conversations/${conversationId}/messages?key=${encodeURIComponent(accessKey)}`, { method: "POST", body: JSON.stringify({ message: text }) })
       : await api("/conversations", { method: "POST", body: JSON.stringify({ message: text }) });
     conversationId = conv.id;
-    render(conv);
+    if (conv.access_key) accessKey = conv.access_key;
+    render(conv, { follow: true });
     poll();
   } catch (e) { $("error").textContent = e.message; setBusy(false); }
 }

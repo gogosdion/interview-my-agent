@@ -14,8 +14,11 @@ This interview agent has a human approval step for actions that affect someone e
 ## Backend, APIs and data
 Custom REST API endpoints inside WordPress for client apps (PHP), MySQL, integrations with payment providers (Viva.com) and newsletter services, Node.js. Python with FastAPI and Postgres for this agent.
 
-## Deployment
-Hostinger, Cloudflare, DNS, SSL, migrations between providers; Docker and Docker Compose for this agent.
+## Deployment, Git and CI/CD
+His own site gowebgo.gr is built and deployed with GitHub Actions: build on GitHub, upload over SSH with rsync, a choice between a test copy and production, a go-live workflow with a dry run and confirmation, and a rollback workflow. Secrets live in GitHub Secrets. Also Hostinger, Cloudflare, DNS, SSL and migrations between providers; Docker and Docker Compose for this agent.
+
+## React and TypeScript
+gowebgo.gr is a Next.js 16 site in TypeScript with Tailwind CSS, migrated from WordPress and being split into React components step by step.
 
 ## Working with clients
 20 projects delivered end to end for small businesses since 2023: from the brief, through design with saavet designs, to launch, training and maintenance. He is used to turning vague requests into working software and iterating with the client.

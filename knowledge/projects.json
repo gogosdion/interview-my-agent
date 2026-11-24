@@ -29,6 +29,36 @@
     ]
   },
   {
+    "slug": "gowebgo",
+    "name": "goWebgo (his own studio site)",
+    "domain": "gowebgo.gr",
+    "kind": "nextjs",
+    "client": "His own web studio, Athens",
+    "design": "goWebgo",
+    "role": "Migration from WordPress to Next.js, CI/CD, hosting",
+    "summary": "His studio's site, moved from WordPress to a static Next.js 16 site (TypeScript, Tailwind CSS) on Hostinger, with GitHub Actions for build, deploy, go-live and rollback.",
+    "details": [
+      "Next.js 16 with the App Router and TypeScript, Tailwind CSS 4, exported as static HTML (output: export), so it runs on shared hosting with no Node server.",
+      "Migration in two phases: first the old WordPress site moved in unchanged (same URLs, HTML and CSS), then sections are being turned into React components one at a time without changing the look.",
+      "CI/CD with GitHub Actions: the site is built on GitHub and uploaded to Hostinger over SSH with rsync. A manual deploy chooses the target: a test copy (new.gowebgo.gr, marked noindex) or production.",
+      "Go-live workflow: a dry run by default and an explicit confirmation; it uploads the new site to a staging folder, moves WordPress to a backup and the new site in with about one second of downtime, then checks the live site. Other subdomains on the same hosting are left untouched.",
+      "A rollback workflow restores WordPress from the backup, and a separate workflow deletes the backup permanently only with confirmation.",
+      "Secrets stay in GitHub Secrets: the SSH deploy key, and the mailbox password, which is sent to the server over SSH standard input and never appears on a command line.",
+      "Contact form in PHP that sends through SMTP with DKIM signing and falls back to mail(); a workflow checks the mail login without sending anything.",
+      "His own cookieless statistics in PHP with SQLite stored outside the web root, rolled up every night as the privacy policy promises; the stats dashboard fails closed unless it is password-protected.",
+      "SEO from data: titles, descriptions, Open Graph and JSON-LD per page in a JSON file, a generated sitemap and robots file, 301 redirects for old URLs, and an llms.txt file for AI assistants.",
+      "Built with Claude Code; the repository has a CLAUDE.md with rules for the agent, such as static export only, keep every URL identical, and no new dependencies without asking."
+    ],
+    "tags": [
+      "Next.js",
+      "TypeScript",
+      "GitHub Actions CI/CD",
+      "Migration"
+    ],
+    "case_study": "https://gowebgo.gr/",
+    "custom_namespaces": []
+  },
+  {
     "slug": "apollon",
     "name": "Apollon Chalandriou",
     "domain": "apollonhalandriou.gr",

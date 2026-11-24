@@ -3,7 +3,7 @@ services:
     image: postgres:16-alpine
     environment:
       POSTGRES_USER: agent
-      POSTGRES_PASSWORD: agent   # local demo only; in production this comes from a secret
+      POSTGRES_PASSWORD: agent   # local only: the database is not reachable from outside Docker
       POSTGRES_DB: agent
     volumes:
       - pgdata:/var/lib/postgresql/data
@@ -21,10 +21,19 @@ services:
     environment:
       DATABASE_URL: postgresql+psycopg://agent:agent@db:5432/agent
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"   # only this laptop; the public link goes through the tunnel
     depends_on:
       db:
         condition: service_healthy
+
+  # Optional public link: docker compose --profile public up
+  # Cloudflare "quick tunnel": free, no account, a new https://....trycloudflare.com address each time.
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    profiles: ["public"]
+    command: tunnel --no-autoupdate --url http://api:8000
+    depends_on:
+      - api
 
 volumes:
   pgdata:

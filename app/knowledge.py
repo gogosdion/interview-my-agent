@@ -23,11 +23,22 @@ STOPWORDS = set(
 )
 
 
+DOC_LABELS = {
+    "profile": "Profile (CV)",
+    "experience": "Experience",
+    "skills": "Skills",
+    "how-i-work": "How he works",
+    "fit-squaredev": "Fit for the role",
+    "this-agent": "About this agent",
+}
+
+
 @dataclass(frozen=True)
 class Chunk:
     id: str
     title: str
     text: str
+    label: str  # short, human-readable name shown to visitors as a source
 
 
 def tokenize(text: str) -> list[str]:
@@ -52,8 +63,10 @@ def _markdown_chunks(path: Path) -> list[Chunk]:
         if not body:
             continue
         title = doc_title if heading == doc_title else f"{doc_title} › {heading}"
+        doc_label = DOC_LABELS.get(doc_id, doc_title)
+        label = doc_label if heading == doc_title else f"{doc_label} › {heading}"
         slug = re.sub(r"[^a-z0-9]+", "-", heading.lower()).strip("-")
-        chunks.append(Chunk(id=f"{doc_id}#{slug}", title=title, text=body))
+        chunks.append(Chunk(id=f"{doc_id}#{slug}", title=title, text=body, label=label))
     return chunks
 
 
@@ -63,7 +76,7 @@ def _project_chunk(p: dict) -> Chunk:
         f"Dionysios's role: {p['role']}.\n{p['summary']}\n- " + "\n- ".join(p["details"])
         + f"\nTags: {', '.join(p['tags'])}. Case study: {p['case_study']}"
     )
-    return Chunk(id=f"projects#{p['slug']}", title=f"Project › {p['name']}", text=text)
+    return Chunk(id=f"projects#{p['slug']}", title=f"Project › {p['name']}", text=text, label=f"Project: {p['name']}")
 
 
 class KnowledgeBase:
@@ -77,6 +90,7 @@ class KnowledgeBase:
         df = Counter(term for d in self.docs for term in d)
         n = len(chunks)
         self.idf = {t: math.log(1 + (n - f + 0.5) / (f + 0.5)) for t, f in df.items()}
+        self.labels = {c.id: c.label for c in chunks}
 
     def search(self, query: str, k: int = 4) -> list[dict]:
         terms = tokenize(query)
@@ -96,6 +110,9 @@ class KnowledgeBase:
              "score": round(s, 2)}
             for s, i in scored[:k]
         ]
+
+    def label(self, source_id: str) -> str | None:
+        return self.labels.get(source_id)
 
 
 @lru_cache(maxsize=1)
