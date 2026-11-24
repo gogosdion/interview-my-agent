@@ -1,0 +1,242 @@
+[
+  {
+    "slug": "pametheatro",
+    "name": "Pame Theatro",
+    "domain": "pame.gowebgo.gr",
+    "client": "Theatre guide for Greece (a goWebgo project)",
+    "design": "goWebgo (design and development)",
+    "role": "Design, development, Claude API integration, MCP setup",
+    "summary": "A guide to shows, theatres and people in the performing arts, where an editor uploads a press release and the Claude API fills in the show's fields as structured JSON; nothing is saved until a person checks it and presses Save.",
+    "details": [
+      "Press release import with the Claude API: the editor uploads a PDF, DOCX, TXT, an image, or pastes text, and the Messages API returns the show's fields (title, dates, weekly schedule, prices, credits, venue, genre, press quotes) in a fixed JSON schema using structured output.",
+      "Human-in-the-loop by design: the JSON only fills the form; an editor reviews it and saves it. The model also returns editor notes listing anything unclear or missing.",
+      "The prompt forbids guessing: anything not in the press release stays empty, so the model does not invent prices, times or dates.",
+      "Secrets handled safely: the API key is read from a constant in wp-config.php or an admin-only setting, and is only ever shown masked. A key test calls the models endpoint, which costs nothing.",
+      "Clear error handling for the API: invalid key, no access to the model, file too large, rate limits or no credit, and temporary overload, each with a message the editor understands.",
+      "The admin can choose the model (Claude Opus or Claude Sonnet, about half the cost). Calls go through the WordPress HTTP API because the server has no Composer for the official SDK.",
+      "Custom plugin with content types and relations for shows, theatres and people, a show programme, sponsorships, contact forms, consent, and a management panel at /admin/ with its own REST endpoints (pt/v1).",
+      "Also uses the WordPress AI plugin with an OpenAI provider for editorial helpers such as alt text, excerpts and summaries."
+    ],
+    "tags": [
+      "Claude API",
+      "Structured output",
+      "Human-in-the-loop",
+      "Novamira MCP"
+    ],
+    "case_study": "https://pame.gowebgo.gr/",
+    "custom_namespaces": [
+      "pt/v1"
+    ]
+  },
+  {
+    "slug": "apollon",
+    "name": "Apollon Chalandriou",
+    "domain": "apollonhalandriou.gr",
+    "client": "Football club and academy, Chalandri (Athens)",
+    "design": "Saavet Designs",
+    "role": "Development, internal app, MCP setup",
+    "summary": "Club website with a match center and next-match countdown, plus My Apollon: a members area where each parent sees only their own children, and an admin panel for the club office.",
+    "details": [
+      "Public site: news, teams, academy, standings, seasons, match programmes and a next-match countdown.",
+      "My Apollon members area with separate roles for parents, coaches, the club office and the board; each role sees only its part, and parents see only their own children.",
+      "Internal app modules: training sessions and attendance, fees with charges, payment tracking, PDF receipts and payment notifications, player evaluations, a coach panel, data import and export.",
+      "Modules that bring in match fixtures from the local football association (EPSA).",
+      "Privacy guard and per-role page access to protect members' data.",
+      "Built on WordPress with Elementor (Hello Elementor child theme); about 75 custom PHP modules written with Claude over MCP (Novamira) in a sandbox folder."
+    ],
+    "tags": [
+      "Novamira MCP",
+      "Internal app",
+      "Members area",
+      "Role-based access"
+    ],
+    "case_study": "https://gowebgo.gr/projects/apollon/",
+    "custom_namespaces": []
+  },
+  {
+    "slug": "politeknos",
+    "name": "Politeknos Agrotis",
+    "domain": "politeknosagrotis.gr",
+    "client": "Handmade kitchenware, Sifnos",
+    "design": "goWebgo (design and development)",
+    "role": "Design, development, internal app, MCP setup",
+    "summary": "E-shop for one-of-a-kind handmade pieces with Viva.com card payments, video recipes and a 7-section admin panel the owner runs from a phone.",
+    "details": [
+      "WooCommerce shop with stock handling for one-of-a-kind pieces.",
+      "Payments with Viva.com Smart Checkout, bank transfer and cash on delivery; invoice fields at checkout.",
+      "Admin panel called Pagkos (\"the counter\") with 7 sections, made to be used from a phone, through a custom plugin and its own REST endpoints (poly/v1).",
+      "A 76-item seasonal produce guide, recipes and video recipes as custom content types.",
+      "Custom theme; a helper role for an assistant with limited access; cookie consent."
+    ],
+    "tags": [
+      "Novamira MCP",
+      "Internal app",
+      "WooCommerce",
+      "Viva.com"
+    ],
+    "case_study": "https://gowebgo.gr/projects/politeknos/",
+    "custom_namespaces": [
+      "poly/v1"
+    ]
+  },
+  {
+    "slug": "zerdelis",
+    "name": "Zerdelis Box",
+    "domain": "zerdelisbox.gr",
+    "client": "Packaging supplies, Athens",
+    "design": "Saavet Designs",
+    "role": "Development, MCP setup",
+    "summary": "Full e-shop with categories, search, cart and online orders, in Greek and English.",
+    "details": [
+      "WooCommerce store with categories, product search, cart and checkout.",
+      "Viva.com card payments set as the default, plus bank transfer.",
+      "Greek and English with TranslatePress.",
+      "Custom theme and a ZerdelisBox Core plugin; structured data (JSON-LD) for search engines; flexible checkout fields."
+    ],
+    "tags": [
+      "Novamira MCP",
+      "WooCommerce",
+      "Bilingual"
+    ],
+    "case_study": "https://gowebgo.gr/projects/zerdelis/",
+    "custom_namespaces": []
+  },
+  {
+    "slug": "goldentimes",
+    "name": "Golden Times",
+    "domain": "goldentimes.gr",
+    "client": "Jewelry distributor, Athens",
+    "design": "goWebgo (design and development)",
+    "role": "Redesign: design and development, MCP setup",
+    "summary": "Redesign for a distributor of ten jewelry houses, with brand pages, catalogs, events and two languages.",
+    "details": [
+      "Brand pages for the jewelry houses, catalogs as embedded PDFs and events.",
+      "Greek and English with Polylang.",
+      "Custom theme with a Golden Times Core plugin and its own REST endpoints (gt-site/v1).",
+      "Accessibility tooling (WCAG scanning) and login protection."
+    ],
+    "tags": [
+      "Novamira MCP",
+      "Redesign",
+      "Bilingual"
+    ],
+    "case_study": "https://gowebgo.gr/projects/goldentimes/",
+    "custom_namespaces": [
+      "gt-site/v1"
+    ]
+  },
+  {
+    "slug": "aplaceapart",
+    "name": "A Place ApArt",
+    "domain": "aplaceapart.gr",
+    "client": "Event venues, central Athens",
+    "design": "Saavet Designs",
+    "role": "Development, internal app, MCP setup",
+    "summary": "Bilingual site for three venues, a page for each, every inquiry arriving through one form into an admin panel.",
+    "details": [
+      "Three venues with their own pages (Club House, Suite, Loft), in Greek and English with Polylang.",
+      "One inquiry form for all venues that feeds an admin panel (a small CRM) with roles: manager, staff, door and viewer; a separate pipeline for a parallel program.",
+      "Custom REST endpoints (apa/v1) behind the forms and the panel; newsletter integration with Hostinger Reach.",
+      "LocalBusiness structured data for each venue, Greek alt text and hreflang for SEO.",
+      "Speed work: WebP images, mobile hero image loaded first, native lazy loading.",
+      "Custom theme built by goWebgo."
+    ],
+    "tags": [
+      "Novamira MCP",
+      "Internal app",
+      "CRM",
+      "Bilingual"
+    ],
+    "case_study": "https://gowebgo.gr/projects/aplaceapart/",
+    "custom_namespaces": [
+      "apa/v1"
+    ]
+  },
+  {
+    "slug": "xoros2510",
+    "name": "Xoros 2510",
+    "domain": "xwros2510.gr",
+    "client": "Cooperative space, Exarchia (Athens)",
+    "design": "goWebgo (design and development)",
+    "role": "Design, development, MCP setup",
+    "summary": "30+ classes in 6 filterable categories and a weekly schedule that builds itself from the class pages. No tracking cookies.",
+    "details": [
+      "Classes are a custom content type; the weekly schedule is generated automatically from them, so the space never edits a timetable by hand.",
+      "6 filterable categories, events and Radio 2510.",
+      "No tracking cookies: privacy-friendly analytics only.",
+      "Custom theme with a Xoros 2510 Core plugin."
+    ],
+    "tags": [
+      "Novamira MCP",
+      "Internal app",
+      "Auto-generated schedule"
+    ],
+    "case_study": "https://gowebgo.gr/projects/2510/",
+    "custom_namespaces": []
+  },
+  {
+    "slug": "brecht",
+    "name": "Brecht-2510 Stage",
+    "domain": "brechtheatre.gr",
+    "client": "Theatre, Athens",
+    "design": "goWebgo (design and development)",
+    "role": "Design, development, MCP setup",
+    "summary": "Shows, events and seminars, with the current programme one tap away and booking beside it.",
+    "details": [
+      "Performances, events and seminars as custom content types.",
+      "The current programme is one tap away, with booking next to it.",
+      "A dedicated editor role so theatre staff can update the programme themselves.",
+      "Custom Brecht theme and Brecht Core plugin."
+    ],
+    "tags": [
+      "Novamira MCP",
+      "Programme",
+      "Design and development"
+    ],
+    "case_study": "https://gowebgo.gr/projects/brecht/",
+    "custom_namespaces": []
+  },
+  {
+    "slug": "iliana",
+    "name": "Iliana",
+    "domain": "ilianalingerie.gr",
+    "client": "Lingerie store in Chalandri, family shop since 1971",
+    "design": "Saavet Designs",
+    "role": "Development, MCP setup",
+    "summary": "Mobile-first site for a 55-year-old family shop: A to H cup, a 3-step fitting guide and one-tap calling.",
+    "details": [
+      "Mobile-first layout with one-tap calling.",
+      "A 3-step fitting guide (bra size calculator) built as a custom module.",
+      "Custom contact form, LocalBusiness and article structured data, cookie consent and redirects, with its own REST endpoints (iliana/v1).",
+      "Custom theme built by goWebgo."
+    ],
+    "tags": [
+      "Novamira MCP",
+      "Mobile-first"
+    ],
+    "case_study": "https://gowebgo.gr/projects/iliana/",
+    "custom_namespaces": [
+      "iliana/v1"
+    ]
+  },
+  {
+    "slug": "saavet",
+    "name": "saavet designs",
+    "domain": "saavetdesigns.com",
+    "client": "Graphic design studio (his design partner)",
+    "design": "Saavet Designs",
+    "role": "Development, MCP setup",
+    "summary": "Bilingual portfolio with full project stories, reels, a sketchbook and notes.",
+    "details": [
+      "Projects as a custom content type with full project stories, plus reels, a sketchbook and notes.",
+      "English and Greek with Polylang.",
+      "Custom theme."
+    ],
+    "tags": [
+      "Novamira MCP",
+      "EL / EN"
+    ],
+    "case_study": "https://gowebgo.gr/projects/saavetdesigns/",
+    "custom_namespaces": []
+  }
+]

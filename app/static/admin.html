@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Admin · Interview my agent</title>
+<style>
+  :root { --bg:#f7f6f2; --card:#fff; --ink:#141414; --muted:#66645e; --line:#e4e1d8; --accent:#2953c7; --ok:#2c7a4b; --bad:#a23a3a; --warn:#9a6512;
+          --mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace; }
+  * { box-sizing: border-box; }
+  body { margin:0; font:14px/1.5 "Segoe UI", system-ui, -apple-system, sans-serif; background:var(--bg); color:var(--ink); }
+  header { padding:16px 24px; border-bottom:1px solid var(--line); background:var(--card); display:flex; gap:16px; align-items:center; flex-wrap:wrap; }
+  header h1 { font-size:16px; margin:0; flex:1; }
+  header a { color:var(--accent); font-size:13px; }
+  header input { padding:6px 10px; border:1px solid var(--line); border-radius:8px; font:inherit; width:200px; }
+  main { display:grid; grid-template-columns: 320px 1fr; gap:18px; padding:18px 24px; max-width:1400px; margin:0 auto; }
+  section { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px; min-width:0; }
+  h2 { font-size:14px; margin:0 0 12px; }
+  .label { font:11px/1.4 var(--mono); letter-spacing:.08em; text-transform:uppercase; color:var(--muted); }
+  .item { border:1px solid var(--line); border-radius:10px; padding:10px 12px; margin-bottom:8px; cursor:pointer; background:var(--card); width:100%; text-align:left; font:inherit; color:inherit; display:block; }
+  .item.selected { border-color:var(--accent); box-shadow: inset 3px 0 0 var(--accent); }
+  .muted { color:var(--muted); font-size:12.5px; }
+  .badge { display:inline-block; padding:1px 8px; border-radius:999px; font-size:11.5px; border:1px solid currentColor; }
+  .s-idle { color:var(--ok); } .s-failed { color:var(--bad); } .s-waiting_approval { color:var(--warn); } .s-running, .s-queued { color:var(--accent); }
+  .approval { border:1px solid #ecd9b0; background:#fbf3e3; border-radius:10px; padding:12px; margin-bottom:10px; }
+  .approval dl { display:grid; grid-template-columns: 80px 1fr; gap:2px 10px; margin:8px 0; }
+  .approval dt { color:var(--muted); } .approval dd { margin:0; overflow-wrap:anywhere; }
+  button.approve { background:var(--ok); color:#fff; border:0; border-radius:8px; padding:7px 14px; font:inherit; cursor:pointer; }
+  button.reject { background:none; color:var(--bad); border:1px solid var(--bad); border-radius:8px; padding:6px 13px; font:inherit; cursor:pointer; margin-left:6px; }
+  .grid2 { display:grid; grid-template-columns: 1fr 1fr; gap:18px; }
+  .event { display:grid; grid-template-columns: 76px 190px 1fr; gap:10px; padding:7px 0; border-bottom:1px solid var(--line); font-size:12.5px; }
+  .event:last-child { border-bottom:0; }
+  .event .data { font-family:var(--mono); font-size:11.5px; color:var(--muted); overflow-wrap:anywhere; white-space:pre-wrap; max-height:220px; overflow:auto; }
+  .event summary { cursor:pointer; font-size:11.5px; }
+  .totals { display:flex; gap:18px; margin-bottom:10px; font:12px var(--mono); color:var(--muted); }
+  .empty { color:var(--muted); }
+  .error { color:var(--bad); font-size:13px; }
+  .t-visitor { background:var(--ink); color:#fff; border-radius:10px; padding:6px 10px; margin:6px 0 6px 20%; }
+  .t-agent { border:1px solid var(--line); border-radius:10px; padding:6px 10px; margin:6px 20% 6px 0; white-space:pre-wrap; }
+  .t-tool { font:12px var(--mono); color:var(--muted); margin:4px 0; }
+  @media (max-width: 1000px) { main, .grid2 { grid-template-columns: 1fr; } .event { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>Admin · Interview my agent</h1>
+  <input id="token" type="password" placeholder="Admin token (if set)" aria-label="Admin token">
+  <span id="error" class="error"></span>
+  <a href="/" target="_blank">Visitor page</a>
+  <a href="/docs" target="_blank">API docs</a>
+</header>
+<main>
+  <section>
+    <h2>Waiting for your approval</h2>
+    <div id="approvals"><p class="empty">Nothing to approve.</p></div>
+    <h2 style="margin-top:18px">Conversations</h2>
+    <div id="conversations"><p class="empty">No conversations yet.</p></div>
+  </section>
+  <div class="grid2">
+    <section>
+      <h2>Conversation <span class="muted" id="convTitle"></span></h2>
+      <div id="transcript"><p class="empty">Select a conversation.</p></div>
+    </section>
+    <section>
+      <h2>Audit log</h2>
+      <div class="totals" id="totals"></div>
+      <div id="audit"><p class="empty">Every model call, tool call and decision appears here.</p></div>
+    </section>
+  </div>
+</main>
+<script>
+let selected = null;
+const $ = (id) => document.getElementById(id);
+const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; };
+try { $("token").value = sessionStorage.getItem("adminToken") || ""; } catch {}
+$("token").oninput = () => { try { sessionStorage.setItem("adminToken", $("token").value); } catch {} refresh(); };
+
+async function api(path, options = {}) {
+  const r = await fetch(path, { headers: { "Content-Type": "application/json", "X-Admin-Token": $("token").value }, ...options });
+  const body = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(typeof body.detail === "string" ? body.detail : "Request failed (" + r.status + ")");
+  return body;
+}
+
+async function loadApprovals() {
+  const list = await api("/approvals?status=pending");
+  const box = $("approvals"); box.replaceChildren();
+  if (!list.length) { box.append(el("p", "empty", "Nothing to approve.")); return; }
+  for (const a of list) {
+    const card = el("div", "approval");
+    card.append(el("div", "label", `Conversation #${a.conversation_id} · ${a.tool_name}`));
+    const dl = el("dl");
+    for (const [k, v] of Object.entries(a.tool_input)) { dl.append(el("dt", "", k), el("dd", "", String(v))); }
+    const ok = el("button", "approve", "Approve"), no = el("button", "reject", "Decline");
+    ok.onclick = () => decide(a.id, "approve"); no.onclick = () => decide(a.id, "reject");
+    card.append(dl, ok, no); box.append(card);
+  }
+}
+
+async function loadConversations() {
+  const list = await api("/conversations");
+  const box = $("conversations"); box.replaceChildren();
+  if (!list.length) { box.append(el("p", "empty", "No conversations yet.")); return; }
+  if (selected === null) selected = list[0].id;
+  for (const c of list) {
+    const b = el("button", "item" + (c.id === selected ? " selected" : "")); b.type = "button";
+    b.onclick = () => { selected = c.id; refresh(); };
+    const top = el("div"); top.append(el("b", "", `#${c.id} `), el("span", `badge s-${c.status}`, c.status.replace("_", " ")));
+    const first = c.transcript.find(t => t.role === "visitor");
+    b.append(top, el("div", "muted", first ? first.text : ""));
+    box.append(b);
+    if (c.id === selected) showConversation(c);
+  }
+}
+
+function showConversation(c) {
+  $("convTitle").textContent = `#${c.id}`;
+  $("totals").replaceChildren(el("span", "", `visitor messages: ${c.visitor_messages}`),
+    el("span", "", `tokens in: ${c.input_tokens}`), el("span", "", `tokens out: ${c.output_tokens}`));
+  const box = $("transcript"); box.replaceChildren();
+  for (const t of c.transcript) box.append(el("div", "t-" + t.role, (t.role === "tool" ? "→ " : "") + t.text));
+}
+
+function short(v, n = 120) { const s = typeof v === "string" ? v : JSON.stringify(v); return s.length > n ? s.slice(0, n) + "…" : s; }
+
+// One readable line per event; the full JSON stays one click away.
+function summarize(e) {
+  const d = e.data;
+  switch (e.event_type) {
+    case "visitor_message": return `“${short(d.text)}”`;
+    case "llm_response": return `stop: ${d.stop_reason} · tokens ${d.input_tokens} in / ${d.output_tokens} out` +
+      (d.tool_calls && d.tool_calls.length ? ` · asks for: ${d.tool_calls.join(", ")}` : "");
+    case "tool_executed": return `${d.tool}(${d.input ? short(d.input, 60) : ""}) → ${d.ok ? "ok" : "error"}` +
+      (d.approved_by ? ` · approved by ${d.approved_by}` : "");
+    case "approval_requested": return `${d.tool} · waiting for a human`;
+    case "approval_decided": return `${d.tool} · ${d.decision}` + (d.reason ? ` · “${short(d.reason, 60)}”` : "");
+    case "answer_sent": return `“${short(d.text)}”`;
+    default: return short(d);
+  }
+}
+
+async function loadAudit() {
+  if (selected === null) return;
+  const events = await api(`/conversations/${selected}/audit`);
+  const box = $("audit");
+  const open = new Set([...box.querySelectorAll("details[open]")].map(x => x.dataset.id));
+  box.replaceChildren();
+  for (const e of events) {
+    const row = el("div", "event");
+    const info = el("div");
+    info.append(el("div", "", summarize(e)));
+    const det = el("details"); det.dataset.id = e.id; if (open.has(String(e.id))) det.open = true;
+    det.append(el("summary", "muted", "raw JSON"), el("div", "data", JSON.stringify(e.data, null, 1)));
+    info.append(det);
+    row.append(el("span", "muted", new Date(e.created_at).toLocaleTimeString()),
+               el("span", "", `${e.event_type} · ${e.actor}`), info);
+    box.append(row);
+  }
+}
+
+async function decide(id, action) {
+  try { await api(`/approvals/${id}/${action}`, { method: "POST", body: JSON.stringify({ reviewer: "Dionysios" }) }); }
+  catch (err) { $("error").textContent = err.message; }
+  refresh();
+}
+
+async function refresh() {
+  try { await Promise.all([loadApprovals(), loadConversations()]); await loadAudit(); $("error").textContent = ""; }
+  catch (e) { $("error").textContent = e.message; }
+}
+refresh(); setInterval(refresh, 2000);
+</script>
+</body>
+</html>
